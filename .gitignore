@@ -1,0 +1,4 @@
+.env
+__pycache__/
+ozon_data_log.csv
+bot_activity.log
