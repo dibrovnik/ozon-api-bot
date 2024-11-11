@@ -7,10 +7,12 @@ from dotenv import load_dotenv
 import os
 import logging
 import asyncio
+import pytz 
 
 # Загрузка переменных окружения из .env файла
 load_dotenv()
 
+moscow_tz = pytz.timezone('Europe/Moscow')
 # Настройки для Telegram бота и API Ozon
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OZON_API_TOKEN = os.getenv("OZON_API_TOKEN")
@@ -59,7 +61,8 @@ except FileNotFoundError:
 # Асинхронная функция для выполнения запроса и записи данных
 async def fetch_and_log_data():
     # Установка текущей даты для date_from и date_to
-    current_date = datetime.now().strftime("%Y-%m-%d")
+    # current_date = datetime.now().strftime("%Y-%m-%d")
+    current_date = datetime.now(moscow_tz).strftime("%Y-%m-%d")
 
     # Параметры для запроса статистики с автоматическим обновлением даты
     payload = {
