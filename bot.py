@@ -57,15 +57,16 @@ except FileNotFoundError:
     logging.info("CSV файл не найден, создан новый файл для логирования данных.")
 
 # Асинхронная функция для выполнения запроса и записи данных
-# Асинхронная функция для выполнения запроса и записи данных
 async def fetch_and_log_data():
     # Установка текущей даты для date_from и date_to
     current_date = datetime.now().strftime("%Y-%m-%d")
 
     # Параметры для запроса статистики с автоматическим обновлением даты
     payload = {
-        "date_from": current_date,
-        "date_to": current_date,
+        # "date_from": current_date,
+        # "date_to": current_date,
+        "date_from": "2024-11-11",
+        "date_to": "2024-11-11",
         "metrics": ["hits_tocart", "ordered_units"],
         "dimension": ["sku"],
         "filters": [],
@@ -85,8 +86,9 @@ async def fetch_and_log_data():
         if not data_log.empty:
             last_add_to_cart = data_log.iloc[-1]["total_add_to_cart"]
             last_ordered_units = data_log.iloc[-1]["total_ordered_units"]
-            new_add_to_cart = total_add_to_cart - last_add_to_cart
-            new_ordered_units = total_ordered_units - last_ordered_units
+            # Проверяем, чтобы разница не была отрицательной
+            new_add_to_cart = max(0, total_add_to_cart - last_add_to_cart)
+            new_ordered_units = max(0, total_ordered_units - last_ordered_units)
         else:
             new_add_to_cart = 0
             new_ordered_units = 0
@@ -111,9 +113,9 @@ async def fetch_and_log_data():
 
         # Проверка порога конверсии
         if conversion_rate_day < CONVERSION_THRESHOLD_VALUE:
-            message = f"КОНВЕРСИЯ МЕНЬШЕ {CONVERSION_THRESHOLD_VALUE}%\n\n" + message
+            message = f"❌ОБЩАЯ КОНВЕРСИЯ МЕНЬШЕ {CONVERSION_THRESHOLD_VALUE}%❌\n\n" + message
 
-        # Добавляем разбивку по каждому товару
+        # Добавляем разбивку по каждому товару, исключая товары с нулевыми значениями
         message += "\n\nПодробная информация по каждому товару:\n"
         for item in data["result"]["data"]:
             sku_id = item["dimensions"][0]["id"]
@@ -121,8 +123,18 @@ async def fetch_and_log_data():
             hits_tocart = item["metrics"][0]
             ordered_units = item["metrics"][1]
 
+            # Пропускаем товары с нулевыми добавлениями в корзину и заказами
+            if hits_tocart == 0 and ordered_units == 0:
+                continue
+
             # Вычисление конверсии для каждого товара
             sku_conversion_rate = (ordered_units / hits_tocart) * 100 if hits_tocart > 0 else 0
+
+            # Проверка конверсии для каждого товара относительно порога
+            if sku_conversion_rate >= CONVERSION_THRESHOLD_VALUE:
+                conversion_status = f"✅ Конверсия выше ({CONVERSION_THRESHOLD_VALUE}%) ✅"
+            else:
+                conversion_status = f"❌ Конверсия ниже ({CONVERSION_THRESHOLD_VALUE}%) ❌"
 
             # Добавление информации по товару в сообщение
             message += (
@@ -130,7 +142,7 @@ async def fetch_and_log_data():
                 f"Артикул (ID): {sku_id}\n"
                 f"Добавлено в корзину: {hits_tocart}\n"
                 f"Заказано: {ordered_units}\n"
-                f"Конверсия: {sku_conversion_rate:.2f}%\n"
+                f"Конверсия: {sku_conversion_rate:.2f}% - {conversion_status}\n"
             )
 
         # Асинхронная отправка сообщения всем пользователям
@@ -147,6 +159,7 @@ async def fetch_and_log_data():
         logging.info("Данные успешно записаны в CSV файл.")
     else:
         logging.error(f"Ошибка запроса к API: {response.status_code} - {response.json()}")
+
 
 
 # Основная асинхронная функция для выполнения отправки с задержкой
