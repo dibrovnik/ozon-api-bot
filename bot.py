@@ -63,10 +63,10 @@ async def fetch_and_log_data():
 
     # Параметры для запроса статистики с автоматическим обновлением даты
     payload = {
-        # "date_from": current_date,
-        # "date_to": current_date,
-        "date_from": "2024-11-11",
-        "date_to": "2024-11-11",
+        "date_from": current_date,
+        "date_to": current_date,
+        # "date_from": "2024-11-11",
+        # "date_to": "2024-11-11",
         "metrics": ["hits_tocart", "ordered_units"],
         "dimension": ["sku"],
         "filters": [],
