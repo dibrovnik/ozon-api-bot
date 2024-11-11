@@ -57,6 +57,7 @@ except FileNotFoundError:
     logging.info("CSV файл не найден, создан новый файл для логирования данных.")
 
 # Асинхронная функция для выполнения запроса и записи данных
+# Асинхронная функция для выполнения запроса и записи данных
 async def fetch_and_log_data():
     # Установка текущей даты для date_from и date_to
     current_date = datetime.now().strftime("%Y-%m-%d")
@@ -90,28 +91,47 @@ async def fetch_and_log_data():
             new_add_to_cart = 0
             new_ordered_units = 0
 
-        # Вычисление конверсии за час
+        # Вычисление конверсии за час и за день
         conversion_rate_hour = (new_ordered_units / new_add_to_cart) * 100 if new_add_to_cart > 0 else 0
-        
-        # Вычисление конверсии за день
         conversion_rate_day = (total_ordered_units / total_add_to_cart) * 100 if total_add_to_cart > 0 else 0
 
+        # Формирование сообщения с общими данными
         message = (
-                f"Дата и время: {timestamp}\n"
-                "\n"
-                f"Общее добавление в корзину: {total_add_to_cart}\n"
-                f"Общее количество заказов: {total_ordered_units}\n"
-                "\n"
-                f"Новые добавления в корзину: {new_add_to_cart}\n"
-                f"Новые заказы: {new_ordered_units}\n"
-                "\n"
-                f"Конверсия за последний час: {conversion_rate_hour:.2f}%\n"
-                f"Конверсия за последний день: {conversion_rate_day:.2f}%"
-            )
-        
-        # Формируем текст сообщения
+            f"Дата и время: {timestamp}\n"
+            "\n"
+            f"Общее добавление в корзину: {total_add_to_cart}\n"
+            f"Общее количество заказов: {total_ordered_units}\n"
+            "\n"
+            f"Новые добавления в корзину: {new_add_to_cart}\n"
+            f"Новые заказы: {new_ordered_units}\n"
+            "\n"
+            f"Конверсия за последний час: {conversion_rate_hour:.2f}%\n"
+            f"Конверсия за последний день: {conversion_rate_day:.2f}%"
+        )
+
+        # Проверка порога конверсии
         if conversion_rate_day < CONVERSION_THRESHOLD_VALUE:
             message = f"КОНВЕРСИЯ МЕНЬШЕ {CONVERSION_THRESHOLD_VALUE}%\n\n" + message
+
+        # Добавляем разбивку по каждому товару
+        message += "\n\nПодробная информация по каждому товару:\n"
+        for item in data["result"]["data"]:
+            sku_id = item["dimensions"][0]["id"]
+            sku_name = item["dimensions"][0]["name"]
+            hits_tocart = item["metrics"][0]
+            ordered_units = item["metrics"][1]
+
+            # Вычисление конверсии для каждого товара
+            sku_conversion_rate = (ordered_units / hits_tocart) * 100 if hits_tocart > 0 else 0
+
+            # Добавление информации по товару в сообщение
+            message += (
+                f"\nТовар: {sku_name}\n"
+                f"Артикул (ID): {sku_id}\n"
+                f"Добавлено в корзину: {hits_tocart}\n"
+                f"Заказано: {ordered_units}\n"
+                f"Конверсия: {sku_conversion_rate:.2f}%\n"
+            )
 
         # Асинхронная отправка сообщения всем пользователям
         for user_id in user_ids:
@@ -127,6 +147,7 @@ async def fetch_and_log_data():
         logging.info("Данные успешно записаны в CSV файл.")
     else:
         logging.error(f"Ошибка запроса к API: {response.status_code} - {response.json()}")
+
 
 # Основная асинхронная функция для выполнения отправки с задержкой
 async def main():
