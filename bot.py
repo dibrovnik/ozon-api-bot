@@ -63,13 +63,12 @@ async def fetch_and_log_data():
     # Установка текущей даты для date_from и date_to
     # current_date = datetime.now().strftime("%Y-%m-%d")
     current_date = datetime.now(moscow_tz).strftime("%Y-%m-%d")
+    # current_date = (datetime.datetime.now() + datetime.timedelta(hours=3)).strftime("%Y-%m-%d")
 
     # Параметры для запроса статистики с автоматическим обновлением даты
     payload = {
         "date_from": current_date,
         "date_to": current_date,
-        # "date_from": "2024-11-11",
-        # "date_to": "2024-11-11",
         "metrics": ["hits_tocart", "ordered_units"],
         "dimension": ["sku"],
         "filters": [],
@@ -83,7 +82,7 @@ async def fetch_and_log_data():
         data = response.json()
         total_add_to_cart = data["result"]["totals"][0]
         total_ordered_units = data["result"]["totals"][1]
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = datetime.now(moscow_tz).strftime("%Y-%m-%d %H:%M:%S")
 
         # Рассчитываем разницу для новых добавлений в корзину и заказов
         if not data_log.empty:
